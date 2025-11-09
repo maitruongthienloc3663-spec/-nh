@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drag & Drop - Đây là ai?</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #c9d6ff, #e2e2e2);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    .card {
+      width: 1100px;
+      max-width: 96%;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      padding: 28px;
+      position: relative;
+      text-align: center;
+    }
+
+    .original {transition: opacity .25s ease, transform .25s ease;}
+    .hidden {opacity: 0; transform: scale(.98); pointer-events: none;}
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(2px);
+      border-radius: 12px;
+    }
+
+    .panel {
+      background: white;
+      padding: 28px;
+      border-radius: 10px;
+      min-width: 320px;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+
+    .panel h1 {margin: 0 0 8px; font-size: 22px;}
+    .panel p {margin: 0 0 16px; color: #555;}
+    .buttons {display: flex; gap: 12px; justify-content: center;}
+    button {padding: 8px 14px; border-radius: 8px; border: 0; cursor: pointer; font-weight: 600;}
+    button.primary {background: #2563eb; color: white;}
+    button.ghost {background: #eef2ff; color: #1f2937;}
+    .small {font-size: 14px; padding: 6px 10px;}
+
+    /* Khu vực chơi */
+    .board {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      flex-wrap: nowrap;
+      margin-bottom: 30px;
+    }
+
+    .dropzone {
+      width: 180px;
+      height: 200px;
+      border: 3px dashed #aaa;
+      border-radius: 15px;
+      background-color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      transition: 0.3s;
+      overflow: hidden;
+      padding: 5px;
+    }
+
+    .dropzone.hovered {border-color: #4CAF50; background-color: #f0fff0; transform: scale(1.05);}
+    .dropzone img {width: 100%; height: 150px; object-fit: cover; border-radius: 10px;}
+
+    #startZone {text-align: center;}
+    .item {
+      width: 120px; height: 120px;
+      border-radius: 10px;
+      cursor: grab;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
+      object-fit: cover;
+      margin-top: 20px;
+    }
+    .item:active {transform: scale(1.1);}
+    #message {margin-top: 15px; font-weight: bold; color: #333; font-size: 18px;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="original" class="original">
+      <h1>🧩 Who is this?</h1>
+
+      <div class="board">
+        <div id="zone1" class="dropzone" data-answer="dog" ondragover="allowDrop(event)" ondragleave="leave(event)" ondrop="drop(event)">
+          <img src="Bùi Duy Hưng.jpg" alt="Hung DB">
+          <h3>Hưng DB</h3>
+        </div>
+        <div id="zone2" class="dropzone" data-answer="cat" ondragover="allowDrop(event)" ondragleave="leave(event)" ondrop="drop(event)">
+          <img src="Mai Truong Thiên Lộc.jpg" alt="Loc Mai">
+          <h3>Lộc Mai</h3>
+        </div>
+        <div id="zone3" class="dropzone" data-answer="bird" ondragover="allowDrop(event)" ondragleave="leave(event)" ondrop="drop(event)">
+          <img src="Nguyễn Tư Tuấn.jpg" alt="Nguyen Tu Tuan">
+          <h3>Anh Tư</h3>
+        </div>
+        <div id="zone4" class="dropzone" data-answer="fish" ondragover="allowDrop(event)" ondragleave="leave(event)" ondrop="drop(event)">
+          <img src="Vũ Thành Luân.jpg" alt="Vu Thanh Luan">
+          <h3>VT Luna (Luan)</h3>
+        </div>
+        <div id="zone5" class="dropzone" data-answer="horse" ondragover="allowDrop(event)" ondragleave="leave(event)" ondrop="drop(event)">
+          <img src="Nguyễn Nhật Anh.jpg" alt="Nguyen Nhat Anh">
+          <h3>Anh IU</h3>
+        </div>
+      </div>
+
+      <div id="startZone">
+        <img id="item1" src="Vũ Thành Luân 2.0.jpg"
+             class="item" draggable="true" ondragstart="drag(event)" data-type="fish" alt="Ảnh cần kéo">
+      </div>
+
+      <div id="message"></div>
+    </div>
+
+    <div id="overlay" class="overlay" style="display:none">
+      <div id="panel" class="panel"></div>
+    </div>
+  </div>
+
+  <script>
+    const original = document.getElementById('original');
+    const overlay = document.getElementById('overlay');
+    const panel = document.getElementById('panel');
+    const startZone = document.getElementById('startZone');
+    const item = document.getElementById('item1');
+
+    function showResult(isCorrect) {
+      original.classList.add('hidden');
+      overlay.style.display = 'flex';
+      panel.innerHTML = '';
+
+      if (!isCorrect) {
+        panel.innerHTML = '<h1 style="color:red">❌ Sai rồi baby!</h1><p>Thử lại nhé...</p>';
+        setTimeout(() => hideOverlayAndReset(), 1000);
+      } else {
+        const h = document.createElement('h1');
+        h.textContent = '✅ Chính xác!';
+        const p = document.createElement('p');
+        p.textContent = 'Bạn chơi tiếp không?';
+        const btnYes = document.createElement('button');
+        btnYes.className = 'primary';
+        btnYes.textContent = 'Có';
+        btnYes.onclick = hideOverlayAndReset;
+        const btnNo = document.createElement('button');
+        btnNo.className = 'ghost';
+        btnNo.textContent = 'Không';
+        btnNo.onclick = () => {
+          panel.innerHTML = '<h1>Cảm ơn vì đã chơi 💖</h1>';
+          const b = document.createElement('button');
+          b.className = 'small';
+          b.textContent = 'Đóng';
+          b.onclick = () => overlay.style.display='none';
+          panel.appendChild(b);
+        };
+        const wrap = document.createElement('div');
+        wrap.className = 'buttons';
+        wrap.append(btnYes, btnNo);
+        panel.append(h, p, wrap);
+      }
+    }
+
+    function hideOverlayAndReset() {
+      overlay.style.display = 'none';
+      original.classList.remove('hidden');
+      document.getElementById('message').innerText = '';
+      startZone.appendChild(item); 
+    }
+
+    // Drag & Drop
+    function allowDrop(ev){ev.preventDefault();ev.currentTarget.classList.add('hovered');}
+    function leave(ev){ev.currentTarget.classList.remove('hovered');}
+    function drag(ev){ev.dataTransfer.setData('text', ev.target.id);}
+    function drop(ev){
+      ev.preventDefault();
+      ev.currentTarget.classList.remove('hovered');
+      const data = ev.dataTransfer.getData('text');
+      const draggedItem = document.getElementById(data);
+      const dropZone = ev.currentTarget;
+
+      dropZone.appendChild(draggedItem);
+
+      const correctAnswer = dropZone.dataset.answer;
+      const itemType = draggedItem.dataset.type;
+
+      if (correctAnswer === itemType) {
+        showResult(true);
+      } else {
+        showResult(false);
+      }
+    }
+  </script>
+</body>
+</html>
